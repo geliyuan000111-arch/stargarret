@@ -55,7 +55,7 @@ jobs:
             ## 安装说明
             - **Mac Apple Silicon**（M1/M2/M3）：下载 `_aarch64.dmg`
             - **Mac Intel**：下载 `_x64.dmg`
-            - **Windows**：下载 `.msi`
+            - **Windows**：下载 `_x64-setup.exe`
 
             首次安装需绕过系统安全提示：
             - Mac：右键 → 打开
