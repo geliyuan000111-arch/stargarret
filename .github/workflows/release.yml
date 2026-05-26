@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            name: Mac (Apple Silicon)
+            args: --target aarch64-apple-darwin
+          - os: macos-13
+            name: Mac (Intel)
+            args: --target x86_64-apple-darwin
+          - os: windows-latest
+            name: Windows
+            args: ''
+
+    runs-on: ${{ matrix.os }}
+    name: Build ${{ matrix.name }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.os == 'macos-14' && 'aarch64-apple-darwin' || matrix.os == 'macos-13' && 'x86_64-apple-darwin' || '' }}
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build and release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: '星星阁楼 ${{ github.ref_name }}'
+          releaseBody: |
+            ## 安装说明
+            - **Mac Apple Silicon**（M1/M2/M3）：下载 `_aarch64.dmg`
+            - **Mac Intel**：下载 `_x64.dmg`
+            - **Windows**：下载 `.msi`
+
+            首次安装需绕过系统安全提示：
+            - Mac：右键 → 打开
+            - Windows：点「更多信息」→「仍要运行」
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
