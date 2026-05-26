@@ -19,7 +19,7 @@ jobs:
           - os: macos-13
             name: Mac (Intel)
             args: --target x86_64-apple-darwin
-          - os: windows-latest
+          - os: windows-2022
             name: Windows
             args: ''
 
