@@ -35,9 +35,11 @@ jobs:
           node-version: 20
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.os == 'macos-14' && 'aarch64-apple-darwin' || matrix.os == 'macos-13' && 'x86_64-apple-darwin' || '' }}
+        run: rustup toolchain install stable --no-self-update && rustup default stable
+
+      - name: Add Rust target (macOS)
+        if: matrix.os != 'windows-latest'
+        run: rustup target add ${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}
 
       - name: Install frontend dependencies
         run: npm ci
