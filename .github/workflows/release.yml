@@ -21,7 +21,7 @@ jobs:
             args: --target x86_64-apple-darwin
           - os: windows-2022
             name: Windows
-            args: ''
+            args: '--bundles nsis'
 
     runs-on: ${{ matrix.os }}
     name: Build ${{ matrix.name }}
