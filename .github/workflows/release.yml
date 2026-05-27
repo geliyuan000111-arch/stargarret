@@ -16,9 +16,6 @@ jobs:
           - os: macos-14
             name: Mac (Apple Silicon)
             args: --target aarch64-apple-darwin
-          - os: macos-13
-            name: Mac (Intel)
-            args: --target x86_64-apple-darwin
           - os: windows-2022
             name: Windows
             args: '--bundles nsis'
@@ -38,8 +35,8 @@ jobs:
         run: rustup toolchain install stable --no-self-update && rustup default stable
 
       - name: Add Rust target (macOS)
-        if: matrix.os != 'windows-latest'
-        run: rustup target add ${{ matrix.args == '--target aarch64-apple-darwin' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }}
+        if: matrix.os == 'macos-14'
+        run: rustup target add aarch64-apple-darwin
 
       - name: Install frontend dependencies
         run: npm ci
@@ -53,9 +50,9 @@ jobs:
           releaseName: '星星阁楼 ${{ github.ref_name }}'
           releaseBody: |
             ## 安装说明
-            - **Mac Apple Silicon**（M1/M2/M3）：下载 `_aarch64.dmg`
-            - **Mac Intel**：下载 `_x64.dmg`
+            - **Mac**（M1/M2/M3/M4）：下载 `_aarch64.dmg`
             - **Windows**：下载 `_x64-setup.exe`
+            - **Mac Intel**：暂不支持
 
             首次安装需绕过系统安全提示：
             - Mac：右键 → 打开
