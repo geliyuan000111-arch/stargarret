@@ -514,6 +514,8 @@ const App: React.FC = () => {
         onExit={handleExitPin}
         onToggleComplete={id => setNotes(prev => prev.map(n => n.id === id ? { ...n, isCompleted: !n.isCompleted } : n))}
         onUpdatePriority={handleUpdatePriority}
+        onUpdateRemark={(id, remark) => setNotes(prev => prev.map(n => n.id === id ? { ...n, remark } : n))}
+        onDelete={id => setNotes(prev => prev.filter(n => n.id !== id))}
       />
     );
   }
