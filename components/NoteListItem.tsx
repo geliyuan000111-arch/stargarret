@@ -35,6 +35,18 @@ export const NoteListItem: React.FC<NoteListItemProps> = ({
   const [customInput, setCustomInput] = useState('');
   const priorityRef = useRef<HTMLDivElement>(null);
   const customInputRef = useRef<HTMLInputElement>(null);
+  const remarkRef = useRef<HTMLTextAreaElement>(null);
+
+  const autoResizeRemark = (el: HTMLTextAreaElement) => {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, window.innerHeight * 0.2) + 'px';
+  };
+
+  useEffect(() => {
+    if (remarkRef.current && note.remark) {
+      autoResizeRemark(remarkRef.current);
+    }
+  }, []);
 
   const isBond = note.category === '羁绊';
 
@@ -198,12 +210,17 @@ export const NoteListItem: React.FC<NoteListItemProps> = ({
           ) : null}
 
           {/* 备注输入 */}
-          <input
-            type="text"
+          <textarea
+            ref={remarkRef}
             value={note.remark || ''}
-            onChange={e => onUpdateRemark(note.id, e.target.value)}
+            onChange={e => {
+              onUpdateRemark(note.id, e.target.value);
+              autoResizeRemark(e.target);
+            }}
             placeholder="添加备注..."
-            className="mt-2 w-full text-xs p-1.5 bg-transparent border border-transparent hover:border-gray-200 focus:border-indigo-200 focus:bg-white rounded transition-all focus:outline-none text-gray-500 italic"
+            rows={2}
+            className="mt-2 w-full text-xs p-1.5 bg-transparent border border-transparent hover:border-gray-200 focus:border-indigo-200 focus:bg-white rounded transition-all focus:outline-none text-gray-500 italic resize-none overflow-y-auto"
+            style={{ maxHeight: '20vh', overflowY: 'auto' }}
           />
 
           {/* 底部：时间 + 操作 */}

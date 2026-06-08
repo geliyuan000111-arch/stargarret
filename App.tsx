@@ -59,6 +59,8 @@ const App: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isComposingRef = useRef(false);
+  const justFinishedComposingRef = useRef(false);
 
   const usedCommands = useMemo(() => {
     if (appMode === 'chat') return ['/羁绊总结'];
@@ -516,6 +518,7 @@ const App: React.FC = () => {
         onUpdatePriority={handleUpdatePriority}
         onUpdateRemark={(id, remark) => setNotes(prev => prev.map(n => n.id === id ? { ...n, remark } : n))}
         onDelete={id => setNotes(prev => prev.filter(n => n.id !== id))}
+        onTogglePinned={id => setNotes(prev => prev.map(n => n.id === id ? { ...n, pinned: !n.pinned } : n))}
       />
     );
   }
@@ -758,7 +761,16 @@ const App: React.FC = () => {
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAction()}
+                onCompositionStart={() => { isComposingRef.current = true; }}
+                onCompositionEnd={() => { isComposingRef.current = false; justFinishedComposingRef.current = true; }}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter') { justFinishedComposingRef.current = false; return; }
+                  if (isComposingRef.current || justFinishedComposingRef.current) {
+                    justFinishedComposingRef.current = false;
+                    return;
+                  }
+                  handleAction();
+                }}
                 placeholder={inputPlaceholder}
                 className="w-full bg-transparent py-4 pl-6 pr-16 focus:outline-none text-gray-700 placeholder:text-gray-400"
                 disabled={isProcessing}

@@ -57,6 +57,8 @@ npm run dev
 
 其他 localStorage key：`gemini_api_key`、`saved_tags`、`command_usage`、`api_tip_dismissed`（无 API key 时底部引导 tip 的关闭状态）、`pin_always_on_top`（Pin 模式"始终在最前"偏好，boolean 字符串，默认 `true`）
 
+`Note.pinned`（`boolean`）存在 `localStorage['smart_notes']` 的笔记数据里，随笔记一同持久化。
+
 ## 设置页（`components/SettingsModal.tsx`）
 
 点击左上角 logo 打开，包含：
@@ -100,6 +102,7 @@ npm run dev
 - **Pin 模式**（`PinView.tsx`）：点击右上角"桌面便签"按钮进入，窗口缩小至 320×520，最小高度 280。仅展示工作叽笔记，支持分类切换、标注优先级、标记完成；无输入/搜索能力。提供"始终在最前"开关（钉子图标，调用 `set_pin_window_level` Tauri 命令）和"恢复全屏"按钮返回完整视图。macOS 通过 objc `NSFloatingWindowLevel(3)` + `NSWindowCollectionBehavior(257)` 实现真正置顶；Windows 用 `set_always_on_top`。Tauri 权限：`core:window:allow-set-always-on-top`、`core:window:allow-set-size`、`core:window:allow-set-min-size`、`shell:allow-open`。
   - **始终在最前记忆**：偏好存入 `localStorage['pin_always_on_top']`（boolean），进入 Pin 模式时自动读取并立即应用，默认值 `true`（初次使用即开启置顶）。切换时同步持久化。退出 Pin 模式时始终关闭置顶（不影响存储的偏好）。
   - **双击展开笔记详情**：Pin 模式下双击任意笔记行，在当前窗口内弹出全屏遮罩详情面板，展示笔记完整信息（内容、链接元数据、备注编辑、优先级选择、完成状态、时间戳、删除）。关闭方式：点击遮罩背景或右上角关闭按钮。详情面板复用 `NoteListItem` 逻辑，但以大号卡片样式呈现，适配小窗口宽度。为此 `PinView` 新增 props：`onUpdateRemark`、`onDelete`。
+  - **置顶**：Pin 模式列表中每条笔记可单独置顶，置顶的笔记排在列表最前面。`Note` 新增 `pinned?: boolean` 字段，`PinView` 新增 `onTogglePinned` prop。入口为右键笔记行弹出 context menu，包含"置顶"/"取消置顶"选项；已置顶的笔记在内容前显示一个小图钉作为状态指示。
 
 ## 发布（GitHub Actions）
 
@@ -109,6 +112,11 @@ npm run dev
 - **Mac Intel**：暂不支持
 
 tag 打法：先把改动 push 到 main，再 `git tag vX.Y.Z && git push origin vX.Y.Z`。
+
+## 交互约定
+
+- **备注输入框**：`NoteListItem`（普通模式）和 `PinView` 详情面板均使用 `<textarea>`，固定最小高度、内容超出后区域内竖向滚动（`overflow-y-auto`），宽度适配容器，`resize-none`。
+- **主输入框回车行为**：用 `isComposingRef`（`useRef(false)`）配合 `onCompositionStart`/`onCompositionEnd` 追踪输入法合成态（比 `e.nativeEvent.isComposing` 更可靠，可覆盖 macOS 系统候选词面板场景）。合成中 Enter 仅上屏候选词，不触发 `handleAction()`。
 
 ## 开发约束
 

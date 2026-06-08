@@ -20,6 +20,7 @@ export interface Note {
   tags?: string[];
   linkMetadata?: LinkMetadata;
   isParsing?: boolean;
+  pinned?: boolean;
 }
 
 export interface CategoryStats {

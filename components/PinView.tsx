@@ -19,20 +19,28 @@ interface PinViewProps {
   onUpdatePriority: (id: string, priority: string | undefined) => void;
   onUpdateRemark: (id: string, remark: string) => void;
   onDelete: (id: string) => void;
+  onTogglePinned: (id: string) => void;
 }
 
-export const PinView: React.FC<PinViewProps> = ({ notes, onExit, onToggleComplete, onUpdatePriority, onUpdateRemark, onDelete }) => {
+export const PinView: React.FC<PinViewProps> = ({ notes, onExit, onToggleComplete, onUpdatePriority, onUpdateRemark, onDelete, onTogglePinned }) => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(() => {
     const stored = localStorage.getItem('pin_always_on_top');
     return stored === null ? true : stored === 'true';
   });
   const [priorityMenuId, setPriorityMenuId] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const [expandedNote, setExpandedNote] = useState<Note | null>(null);
   const [detailPriorityOpen, setDetailPriorityOpen] = useState(false);
   const [detailCustomInput, setDetailCustomInput] = useState('');
   const detailPriorityRef = useRef<HTMLDivElement>(null);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const detailRemarkRef = useRef<HTMLTextAreaElement>(null);
+
+  const autoResizeDetailRemark = (el: HTMLTextAreaElement) => {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, window.innerHeight * 0.4) + 'px';
+  };
 
   const workNotes = notes.filter(n =>
     n.category !== '系统' &&
@@ -41,9 +49,13 @@ export const PinView: React.FC<PinViewProps> = ({ notes, onExit, onToggleComplet
 
   const categories = [...new Set(workNotes.map(n => n.category))].sort();
 
-  const displayNotes = selectedCategory
+  const displayNotes = (selectedCategory
     ? workNotes.filter(n => n.category === selectedCategory)
-    : workNotes;
+    : workNotes
+  ).slice().sort((a, b) => {
+    if (a.pinned === b.pinned) return 0;
+    return a.pinned ? -1 : 1;
+  });
 
   const applyAlwaysOnTop = async (pinned: boolean) => {
     try {
@@ -76,6 +88,9 @@ export const PinView: React.FC<PinViewProps> = ({ notes, onExit, onToggleComplet
         setDetailPriorityOpen(false);
         setDetailCustomInput('');
       }
+      if (!target.closest('[data-context-menu]')) {
+        setContextMenu(null);
+      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -88,6 +103,13 @@ export const PinView: React.FC<PinViewProps> = ({ notes, onExit, onToggleComplet
       if (latest) setExpandedNote(latest);
     }
   }, [notes]);
+
+  // 详情面板打开时，初始化备注框高度
+  useEffect(() => {
+    if (expandedNote && detailRemarkRef.current) {
+      autoResizeDetailRemark(detailRemarkRef.current);
+    }
+  }, [expandedNote?.id]);
 
   const handleNoteClick = (note: Note) => {
     if (clickTimerRef.current) {
@@ -173,10 +195,14 @@ export const PinView: React.FC<PinViewProps> = ({ notes, onExit, onToggleComplet
               <li
                 key={note.id}
                 onClick={() => handleNoteClick(note)}
+                onContextMenu={e => {
+                  e.preventDefault();
+                  setContextMenu({ id: note.id, x: e.clientX, y: e.clientY });
+                }}
                 className="flex items-start gap-2 px-3 py-2 border-b border-gray-50 hover:bg-gray-50 transition-colors group cursor-pointer select-none"
               >
                 <button
-                  onClick={() => onToggleComplete(note.id)}
+                  onClick={e => { e.stopPropagation(); onToggleComplete(note.id); }}
                   className={`mt-0.5 flex-shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors ${
                     note.isCompleted
                       ? 'bg-indigo-500 border-indigo-500 text-white'
@@ -185,6 +211,10 @@ export const PinView: React.FC<PinViewProps> = ({ notes, onExit, onToggleComplet
                 >
                   {note.isCompleted && <i className="fas fa-check text-[7px]" />}
                 </button>
+
+                {note.pinned && (
+                  <i className="fas fa-thumbtack text-[8px] text-indigo-400 mt-1 flex-shrink-0" />
+                )}
 
                 <p className={`flex-1 text-[11px] leading-snug break-words min-w-0 pt-px ${
                   note.isCompleted ? 'line-through text-gray-300' : 'text-gray-700'
@@ -247,6 +277,27 @@ export const PinView: React.FC<PinViewProps> = ({ notes, onExit, onToggleComplet
           {isAlwaysOnTop ? '📌 始终最前' : 'Pin 模式'}
         </p>
       </div>
+
+      {/* 右键菜单 */}
+      {contextMenu && (() => {
+        const note = notes.find(n => n.id === contextMenu.id);
+        if (!note) return null;
+        return (
+          <div
+            data-context-menu
+            className="fixed bg-white border border-gray-100 rounded-xl shadow-xl z-40 py-1 min-w-[110px]"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+          >
+            <button
+              onClick={() => { onTogglePinned(contextMenu.id); setContextMenu(null); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              <i className={`fas fa-thumbtack text-[10px] ${note.pinned ? 'text-indigo-500' : 'text-gray-400'}`} />
+              {note.pinned ? '取消置顶' : '置顶'}
+            </button>
+          </div>
+        );
+      })()}
 
       {/* 笔记详情遮罩 */}
       {expandedNote && (
@@ -382,12 +433,17 @@ export const PinView: React.FC<PinViewProps> = ({ notes, onExit, onToggleComplet
               </div>
 
               {/* 备注 */}
-              <input
-                type="text"
+              <textarea
+                ref={detailRemarkRef}
                 value={expandedNote.remark || ''}
-                onChange={e => onUpdateRemark(expandedNote.id, e.target.value)}
+                onChange={e => {
+                  onUpdateRemark(expandedNote.id, e.target.value);
+                  autoResizeDetailRemark(e.target);
+                }}
                 placeholder="添加备注..."
-                className="w-full text-xs p-2 bg-gray-50 border border-gray-100 hover:border-gray-200 focus:border-indigo-200 focus:bg-white rounded-lg transition-all focus:outline-none text-gray-500 italic"
+                rows={3}
+                className="w-full text-xs p-2 bg-gray-50 border border-gray-100 hover:border-gray-200 focus:border-indigo-200 focus:bg-white rounded-lg transition-all focus:outline-none text-gray-500 italic resize-none overflow-y-auto"
+                style={{ maxHeight: '40vh', overflowY: 'auto' }}
               />
 
               {/* 时间 */}
